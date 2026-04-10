@@ -145,16 +145,6 @@ def is_in_battle(frame):
     #bottom region of screen 
     region = frame[int(height * 0.75):height, 0:width]
 
-    """
-    #convert to grayscale
-    gray = cv2.cvtColor(bottom_region, cv2.COLOR_BGR2GRAY)
-
-    #get brightness average
-    avg_brightness = gray.mean()
-    print("Brightness: ", avg_brightness)
-    return avg_brightness < 50
-    """
-
     #Convert to numpy array
     region = np.array(region)
 
