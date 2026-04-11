@@ -20,6 +20,8 @@ def hunt():
     print("1")
     time.sleep(1)
     print("Start")
+    hunt_start_time = time.time()
+    shiny_log("Shiny hunt started")
 
     # Hunt Sequence Loop starts
     try:
@@ -35,30 +37,29 @@ def hunt():
             if is_in_battle(frame):
                 print("Battle detected!")
 
-                # Pressing A through the dialogue
-                time.sleep(4)
-                pyautogui.keyDown('x')
-                time.sleep(0.005)
-                pyautogui.keyUp('x')
-                time.sleep(2)
-                pyautogui.keyDown('x')
-                time.sleep(0.005)
-                pyautogui.keyUp('x')
-                time.sleep(1) #Probably need to adjust this for time for shiny detection
-
+                
                 # Check for Shiny
+                shiny = is_shiny(frame)
 
                 # If: Shiny found; stop the Hunt
-
+                if shiny:
+                    print("✨SHINY FOUND!!!!✨")
+                    hunt_end_time = time.time()
+                    shiny_log((f"!!**SHINY FOUND at encounter #{encounter} after {get_elapsed_time(hunt_end_time, hunt_start_time)}**!!"))
+                    print("🛑 End Hunt")
+                    return
+                
                 # Else: No Shiny; run from battle 
-                run_from_battle()
+                else:
+                    print("Not shiny, running...")
+                    run_from_battle()
                 
             # Else: Spin in Place
             spin_in_place()
 
     # Interrupt Loop and Stop the Hunt
     except KeyboardInterrupt:
-        print("Stopped.")
+        print("Hunt Ended")
     
 
 if __name__ == "__main__":
