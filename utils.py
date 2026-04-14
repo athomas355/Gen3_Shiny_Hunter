@@ -4,6 +4,8 @@ import cv2
 import pygetwindow as gw
 import pyautogui
 import time
+import os
+import requests
 import keyboard
 from pynput import keyboard
 
@@ -13,8 +15,7 @@ from pynput import keyboard
 # -----------------------------
 prev_gray = None
 sparkle_history = [] 
-encounter = 0
-log_file = "shiny_log.txt"
+WEBHOOK_URL = "https://discord.com/api/webhooks/1493433569211846677/xOPN6NSOKOR_rq2Bh3N7ZxXHxEEImATG6p11DVstH2uboQ4n4zqVh_abdzfGUbwdr2e_"
 
 # -----------------------------
 # FUNCTION: 🪟 Get Emulator Window
@@ -129,7 +130,7 @@ def get_pokemon_region(frame):
 # FUNCTION: ✨ Detect Shiny Pokemon
 # ---------------------------------------
 def is_shiny(frame, duration=5):
-    global encounter
+    global encounters
 
     start_time = time.time()
     #prev_frame = None
@@ -144,8 +145,9 @@ def is_shiny(frame, duration=5):
         #print("Bright pixels:", count)
 
         if is_sparkle:
-            print("✨ SHINY DETECTED ✨")
-            shiny_log(f"!!**SHINY FOUND at encounter #{encounter}**!!")
+            filename = f"shiny_found.png"
+            cv2.imwrite(filename, get_pokemon_region(frame))
+            send_discord_image(filename)
             return True
 
         #prev_frame = region
@@ -165,7 +167,7 @@ def spin_in_place():
 # FUNCTION: ⚔️ Battle Detection
 # ---------------------------------------
 def is_in_battle(frame):
-    global encounter
+    global encounters
 
     height, width, _ = frame.shape
 
@@ -183,9 +185,11 @@ def is_in_battle(frame):
 
     count = cv2.countNonZero(mask)
 
+    '''
     if count > 5000:
-        encounter += 1
-        shiny_log(f"Encounter #{encounter}")
+        encounters += 1
+        encounter_log(f"encounters #{str(encounters)}")
+    '''
 
     return count > 5000
 
@@ -222,16 +226,42 @@ def run_from_battle():
     time.sleep(3)
 
 # ---------------------------------------
+# FUNCTION: Load previous encounters or encounter = 0 
+# ---------------------------------------
+def load_encounters():
+    if os.path.exists("encounter_count.txt"):
+        with open("encounter_count.txt", "r") as f:
+            content = get_last_line("encounter_count.txt")
+            print("Content is: ", content)
+            content_arr = content.split()
+
+            print("hi", content)
+            if content:
+                print(content_arr[3])
+                return int(content_arr[3])
+            else:
+                print("⚠️ Invalid encounter file, resetting to 0")
+                return 0
+    return 0
+
+# ---------------------------------------
+# FUNCTION: save encounters
+# ---------------------------------------
+def save_encounters(count):
+    with open("encounter_count.txt", "w") as f:
+        f.write(str(count))
+
+# ---------------------------------------
 # FUNCTION: Log Function
 # ---------------------------------------
-def shiny_log(message):
+def encounter_log(message):
     timestamp = time.strftime("%H:%M:%S")
     full_message = f"[{timestamp}] {message}"
 
     print(full_message)
 
-    with open(log_file, "a") as f:
-        f.write(full_message + "\n")
+    with open("encounter_count.txt", "a") as f:
+        f.write("\n"+ full_message)
 
 # ---------------------------------------
 # FUNCTION: Time Elapsed
@@ -244,7 +274,44 @@ def get_elapsed_time(end_time, start_time):
     seconds = elapsed % 60
 
     return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+# ---------------------------------------
+# FUNCTION: Get Last line of txt file
+# ---------------------------------------
+def get_last_line(filename):
+    with open(filename, 'rb') as f:
+        try:
+            # Seek to the second to last byte (avoiding a trailing newline)
+            f.seek(-2, os.SEEK_END)
+            # Read backward until a newline character is found
+            while f.read(1) != b'\n':
+                f.seek(-2, os.SEEK_CUR)
+        except OSError:
+            # Handle files with only one line by seeking to the start
+            f.seek(0)
+        
+        return f.readline().decode().strip()
     
+# ---------------------------------------
+# FUNCTION: Discord Notification
+# ---------------------------------------
+def send_discord_message(message):
+
+    message = "✨ " + message + " ✨"
+    data = {
+        "content": message
+    }
+
+    requests.post(WEBHOOK_URL, json=data)
+
+# ---------------------------------------
+# FUNCTION: Send Shiny Image to Discord
+# ---------------------------------------
+def send_discord_image(image_path):
+    with open(image_path, "rb") as f:
+        files = {"file": f}
+
+        requests.post(WEBHOOK_URL, files=files)
 
 # ---------------------------------------
 # FUNCTION: 🪲 Debug Window
