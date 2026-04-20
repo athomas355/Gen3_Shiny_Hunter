@@ -1,5 +1,8 @@
 from utils import *
 
+listener = keyboard.Listener()
+listener.start()
+
 def hunt():
 
     # Command to start Shiny Hunt
@@ -9,19 +12,21 @@ def hunt():
         if cmd.lower() == "hunt":
             break
     
-    # Time to click into game window 
-    print("Click into Game...")
-    print("Beginning Hunt...")
-    time.sleep(1)
-    print("3")
-    time.sleep(1)
-    print("2")
-    time.sleep(1)
-    print("1")
-    time.sleep(1)
-    print("Start")
-    hunt_start_time = time.time()
-    shiny_log("Shiny hunt started")
+    click_into_window()
+
+    # Check if encounter file is there and it has already started the hunt
+    if os.path.exists("encounter_count.txt"):
+        hunt_start_time = load_start_time()
+        encounters = load_encounters()
+    else:
+        hunt_start_time = time.strftime("%H:%M:%S")
+        encounters = 0
+        with open("encounter_count.txt", "w") as f:
+
+            f.write(f"[{hunt_start_time}] Shiny Hunt Started\n")
+
+    
+    print("Encounters start at: ", encounters)
 
     # Hunt Sequence Loop starts
     try:
@@ -36,6 +41,8 @@ def hunt():
             # Check if in Battle 
             if is_in_battle(frame):
                 print("Battle detected!")
+                encounters += 1 
+                encounter_log(f"Encounter # {str(encounters)}")
 
                 
                 # Check for Shiny
@@ -44,8 +51,14 @@ def hunt():
                 # If: Shiny found; stop the Hunt
                 if shiny:
                     print("✨SHINY FOUND!!!!✨")
+                
+                    # send notification message to discord
                     hunt_end_time = time.time()
-                    shiny_log((f"!!**SHINY FOUND at encounter #{encounter} after {get_elapsed_time(hunt_end_time, hunt_start_time)}**!!"))
+                    shiny_found_msg = f"\n!!**SHINY FOUND at encounter # {encounters} after {get_elapsed_time(hunt_end_time, hunt_start_time)}**!!"
+                    shiny_log((shiny_found_msg))
+                    send_discord_message(shiny_found_msg)
+
+                    # End Hunt
                     print("🛑 End Hunt")
                     return
                 
@@ -60,7 +73,9 @@ def hunt():
     # Interrupt Loop and Stop the Hunt
     except KeyboardInterrupt:
         print("Hunt Ended")
-    
+
+    finally:
+        listener.stop()
 
 if __name__ == "__main__":
     hunt()

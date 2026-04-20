@@ -6,7 +6,7 @@ import pyautogui
 import time
 import os
 import requests
-import keyboard
+import keyboard as kb
 from pynput import keyboard
 
 
@@ -16,14 +16,14 @@ from pynput import keyboard
 prev_gray = None
 sparkle_history = [] 
 WEBHOOK_URL = "https://discord.com/api/webhooks/1493433569211846677/xOPN6NSOKOR_rq2Bh3N7ZxXHxEEImATG6p11DVstH2uboQ4n4zqVh_abdzfGUbwdr2e_"
-
+EXIT_PROGRAM = False
 # -----------------------------
 # FUNCTION: 🪟 Get Emulator Window
 # -----------------------------
 def get_emulator_window():
     
     for title in gw.getAllTitles():
-        if "Playback" in title:  # replace with actual emulator title
+        if "Playback" in title or "mGBA" in title:  # replace with actual emulator title
             return gw.getWindowsWithTitle(title)[0]
         
     return None
@@ -125,11 +125,22 @@ def get_pokemon_region(frame):
         int(height * 0.1):int(height * 0.5),
         int(width * 0.55):int(width * 0.82)
     ]
+
+# ---------------------------------------
+# FUNCTION: 📷 Get Pokemon Region; 64x64 pixels
+# ---------------------------------------
+def get_starter_region(frame):
+    height, width, _ = frame.shape
+
+    return frame [
+        int(height * 0.3):int(height * 0.72),
+        int(width * 0.2):int(width * 0.5)
+    ]
     
 # ---------------------------------------
 # FUNCTION: ✨ Detect Shiny Pokemon
 # ---------------------------------------
-def is_shiny(frame, duration=5):
+def is_shiny(frame, starter=0, duration=5):
     global encounters
 
     start_time = time.time()
@@ -138,16 +149,25 @@ def is_shiny(frame, duration=5):
     while time.time() - start_time < duration:
         frame = capture_emulator()
 
-        region = get_pokemon_region(frame)
+        if starter == 1:
+            region = get_starter_region(frame)
+            check_frame(region)
+        else:
+            region = get_pokemon_region(frame)
 
         is_sparkle = detect_sparkle(region)
 
         #print("Bright pixels:", count)
 
         if is_sparkle:
-            filename = f"shiny_found.png"
-            cv2.imwrite(filename, get_pokemon_region(frame))
-            send_discord_image(filename)
+            if starter == 1:
+                filename = f"shiny_found.png"
+                cv2.imwrite(filename, get_starter_region(frame))
+                send_discord_image(filename)
+            else: 
+                filename = f"shiny_found.png"
+                cv2.imwrite(filename, get_pokemon_region(frame))
+                send_discord_image(filename)
             return True
 
         #prev_frame = region
@@ -162,6 +182,19 @@ def spin_in_place():
     for d in ['up', 'down']:
         pyautogui.keyDown(d)
         pyautogui.keyUp(d)
+
+# ---------------------------------------
+# FUNCTION: Stop Listener
+# ---------------------------------------
+def on_press(key):
+    try:
+        if key.char == 'q':
+            print("Q pressed → stopping bot")
+            return KeyboardInterrupt
+    except AttributeError:
+        if key == keyboard.Key.esc:
+            print("ESC pressed → stopping bot")
+            return KeyboardInterrupt
 
 # ---------------------------------------
 # FUNCTION: ⚔️ Battle Detection
@@ -184,12 +217,6 @@ def is_in_battle(frame):
     mask = cv2.inRange(region, lower, upper)
 
     count = cv2.countNonZero(mask)
-
-    '''
-    if count > 5000:
-        encounters += 1
-        encounter_log(f"encounters #{str(encounters)}")
-    '''
 
     return count > 5000
 
@@ -232,13 +259,25 @@ def load_encounters():
     if os.path.exists("encounter_count.txt"):
         with open("encounter_count.txt", "r") as f:
             content = get_last_line("encounter_count.txt")
-            print("Content is: ", content)
             content_arr = content.split()
 
-            print("hi", content)
             if content:
-                print(content_arr[3])
                 return int(content_arr[3])
+            else:
+                print("⚠️ Invalid encounter file, resetting to 0")
+                return 0
+    return 0
+
+# ---------------------------------------
+# FUNCTION: Load previous encounters or encounter = 0 
+# ---------------------------------------
+def load_start_time():
+    if os.path.exists("encounter_count.txt"):
+        with open("encounter_count.txt", "r") as f:
+            line = f.readline()
+
+            if line:
+                return line.split()[0]
             else:
                 print("⚠️ Invalid encounter file, resetting to 0")
                 return 0
@@ -252,16 +291,43 @@ def save_encounters(count):
         f.write(str(count))
 
 # ---------------------------------------
-# FUNCTION: Log Function
+# FUNCTION: Encounter Log Function
 # ---------------------------------------
 def encounter_log(message):
+    with open("encounter_count.txt", "r") as f:
+        lines = f.readlines()
+
+    if len(lines) == 1:
+        hunt_start_time = time.strftime("%H:%M:%S")
+        full_message = f"[{hunt_start_time}] Encounter # 1"
+        with open("encounter_count.txt", "w") as f:
+            lines.append(full_message)
+            f.writelines(lines)
+            return
+
     timestamp = time.strftime("%H:%M:%S")
     full_message = f"[{timestamp}] {message}"
 
     print(full_message)
+    if len(lines) >= 2:
+        lines[1] = full_message
 
-    with open("encounter_count.txt", "a") as f:
-        f.write("\n"+ full_message)
+    with open("encounter_count.txt", "w") as f:
+        f.writelines(lines)
+
+# ---------------------------------------
+# FUNCTION: Shiny Log Function
+# ---------------------------------------
+def shiny_log(message):
+    with open("encounter_count.txt", "r") as f:
+        lines = f.readlines()
+
+    if len(lines) == 2:
+        full_message = f"{message}"
+        with open("encounter_count.txt", "w") as f:
+            lines.append(full_message)
+            f.writelines(lines)
+            return
 
 # ---------------------------------------
 # FUNCTION: Time Elapsed
@@ -312,6 +378,22 @@ def send_discord_image(image_path):
         files = {"file": f}
 
         requests.post(WEBHOOK_URL, files=files)
+
+# ---------------------------------------
+# FUNCTION: Click into Window
+# ---------------------------------------
+def click_into_window():
+    # Time to click into game window 
+    print("Click into Game...")
+    print("Beginning Hunt...")
+    time.sleep(1)
+    print("3")
+    time.sleep(1)
+    print("2")
+    time.sleep(1)
+    print("1")
+    time.sleep(1)
+    print("Shiny Hunt Started")
 
 # ---------------------------------------
 # FUNCTION: 🪲 Debug Window
