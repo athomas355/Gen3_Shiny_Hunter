@@ -33,31 +33,44 @@ def starter_hunt():
         # Select Starter
         select_starter(starter)
 
+        '''
         # Wait for battle
         while True:
             frame = capture_emulator()
             if is_in_battle(frame):
                 break
-            time.sleep(3)
-
-        # Increment Encounter
-        encounters += 1
-        
-        encounter_log(f"Encounter # {encounters}")
+        '''       
+        time.sleep(8)
 
         # Proceed to throwing out your pokemon 
         pyautogui.keyDown('x')
-        print("hello I am here")
         pyautogui.keyUp('x')
-        time.sleep(2)
+
+        # Increment Encounter
+        encounters += 1
+        encounter_log(f"Encounter # {encounters}")
 
 
+        # Go to pokemon summary
+        time.sleep(3.5)
+        go_to_summary()
+        time.sleep(1)
+
+        
         # Check for shiny
-        shiny = is_shiny(frame, 1)
+        frame = capture_emulator()
+        shiny = is_shiny_from_summary(frame)
 
         if shiny:
             print("✨SHINY FOUND!!!!✨")
             shiny_log("\nshiny found")
+            hunt_end_time = time.time()
+            shiny_found_msg = f"\n!!**SHINY FOUND at encounter # {encounters} after {get_elapsed_time(hunt_end_time, hunt_start_time)}**!!"
+
+            filename = f"shiny_found.png"
+            cv2.imwrite(filename, get_sprite_region(frame))
+            send_discord_image(filename)
+            send_discord_message(shiny_found_msg)
 
             # End Hunt
             print("🛑 End Hunt")
@@ -66,7 +79,7 @@ def starter_hunt():
         else:
             print("Not shiny, resetting...")
 
-        
+   
 
 if __name__ == "__main__":
     starter_hunt()

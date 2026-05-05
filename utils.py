@@ -8,6 +8,7 @@ import os
 import requests
 import keyboard as kb
 from pynput import keyboard
+from datetime import datetime, date
 
 
 # -----------------------------
@@ -24,8 +25,10 @@ def get_emulator_window():
     
     for title in gw.getAllTitles():
         if "Playback" in title or "mGBA" in title:  # replace with actual emulator title
-            return gw.getWindowsWithTitle(title)[0]
-        
+            windows = gw.getWindowsWithTitle(title)
+
+            if windows:
+                return windows[0]
     return None
 
 # -----------------------------
@@ -149,9 +152,9 @@ def is_shiny(frame, starter=0, duration=5):
     while time.time() - start_time < duration:
         frame = capture_emulator()
 
-        if starter == 1:
+        if starter == 1 or starter == 2 or starter == 3: # I don't think we need this anymore
             region = get_starter_region(frame)
-            check_frame(region)
+            #check_frame(region)
         else:
             region = get_pokemon_region(frame)
 
@@ -277,7 +280,10 @@ def load_start_time():
             line = f.readline()
 
             if line:
-                return line.split()[0]
+                struct_t = datetime.strptime(line.split()[0], "[%H:%M:%S]").time()
+                today_dt = datetime.combine(date.today(), struct_t)
+                start_time = today_dt.timestamp()
+                return start_time
             else:
                 print("⚠️ Invalid encounter file, resetting to 0")
                 return 0
