@@ -19,7 +19,7 @@ def hunt():
         hunt_start_time = load_start_time()
         encounters = load_encounters()
     else:
-        hunt_start_time = time.strftime("%H:%M:%S")
+        hunt_start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         encounters = 0
         with open("encounter_count.txt", "w") as f:
 
@@ -53,7 +53,7 @@ def hunt():
                     print("✨SHINY FOUND!!!!✨")
                 
                     # send notification message to discord
-                    hunt_end_time = time.time()
+                    hunt_end_time = datetime.now()
                     shiny_found_msg = f"\n!!**SHINY FOUND at encounter # {encounters} after {get_elapsed_time(hunt_end_time, hunt_start_time)}**!!"
                     shiny_log((shiny_found_msg))
                     send_discord_message(shiny_found_msg)

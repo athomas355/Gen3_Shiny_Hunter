@@ -261,11 +261,16 @@ def run_from_battle():
 def load_encounters():
     if os.path.exists("encounter_count.txt"):
         with open("encounter_count.txt", "r") as f:
+            lines = f.readlines()
+
+            if len(lines) == 1:
+                return 0
+            
             content = get_last_line("encounter_count.txt")
             content_arr = content.split()
 
             if content:
-                return int(content_arr[3])
+                return int(content_arr[4])
             else:
                 print("⚠️ Invalid encounter file, resetting to 0")
                 return 0
@@ -280,9 +285,13 @@ def load_start_time():
             line = f.readline()
 
             if line:
-                struct_t = datetime.strptime(line.split()[0], "[%H:%M:%S]").time()
-                today_dt = datetime.combine(date.today(), struct_t)
-                start_time = today_dt.timestamp()
+                #struct_t = datetime.strptime(line.split()[0], "%Y-%m-%d %H:%M:%S").time()
+                #today_dt = datetime.combine(date.today(), struct_t)
+                #start_time = today_dt.timestamp()
+                start_str = line.split()[0] + " " + line.split()[1]
+                start_str = start_str.strip("[]")
+                start_time = datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
+
                 return start_time
             else:
                 print("⚠️ Invalid encounter file, resetting to 0")
@@ -304,14 +313,14 @@ def encounter_log(message):
         lines = f.readlines()
 
     if len(lines) == 1:
-        hunt_start_time = time.strftime("%H:%M:%S")
+        hunt_start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         full_message = f"[{hunt_start_time}] Encounter # 1"
         with open("encounter_count.txt", "w") as f:
             lines.append(full_message)
             f.writelines(lines)
             return
 
-    timestamp = time.strftime("%H:%M:%S")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     full_message = f"[{timestamp}] {message}"
 
     print(full_message)
@@ -339,13 +348,24 @@ def shiny_log(message):
 # FUNCTION: Time Elapsed
 # ---------------------------------------
 def get_elapsed_time(end_time, start_time):
-    elapsed = int(end_time - start_time)
+    #elapsed = int(end_time - start_time)
+    elapsed = end_time - start_time
 
+    '''
     hours = elapsed // 3600
     minutes = (elapsed % 3600) // 60
     seconds = elapsed % 60
 
     return f"{hours:02}:{minutes:02}:{seconds:02}"
+    '''
+
+    days = elapsed.days
+    hours, remainder = divmod(elapsed.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    formatted = f"{days} days {hours} hours {minutes} minutes {seconds:02} seconds"
+
+    return formatted
 
 # ---------------------------------------
 # FUNCTION: Get Last line of txt file

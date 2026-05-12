@@ -17,7 +17,7 @@ def starter_hunt():
         hunt_start_time = load_start_time()
         encounters = load_encounters()
     else:
-        hunt_start_time = time.strftime("%H:%M:%S")
+        hunt_start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         encounters = 0
         with open("encounter_count.txt", "w") as f:
 
@@ -63,9 +63,9 @@ def starter_hunt():
 
         if shiny:
             print("✨SHINY FOUND!!!!✨")
-            shiny_log("\nshiny found")
-            hunt_end_time = time.time()
+            hunt_end_time = datetime.now()
             shiny_found_msg = f"\n!!**SHINY FOUND at encounter # {encounters} after {get_elapsed_time(hunt_end_time, hunt_start_time)}**!!"
+            shiny_log(shiny_found_msg)
 
             filename = f"shiny_found.png"
             cv2.imwrite(filename, get_sprite_region(frame))
